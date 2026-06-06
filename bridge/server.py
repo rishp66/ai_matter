@@ -21,11 +21,15 @@ def approve(req: ActionRequest) -> dict:
     draft = drafts.claim(req.context.draft_id)
     if draft is None:
         return {"update": {"message": "_Already handled._"}}
-    mm_client.post_reply(
-        channel_id=draft.target_channel_id,
-        root_id=draft.root_id,
-        text=draft.reply,
-    )
+    try:
+        mm_client.post_reply(
+            channel_id=draft.target_channel_id,
+            root_id=draft.root_id,
+            text=draft.reply,
+        )
+    except Exception:
+        drafts.put(draft)  # restore so user can retry
+        raise             # FastAPI → 500; MM shows error, buttons remain
     return {"update": {"message": "✓ Sent to channel.", "props": {}}}
 
 

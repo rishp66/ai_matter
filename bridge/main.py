@@ -10,12 +10,12 @@ async def handle_message(msg: Message) -> None:
     root = msg.root_id or msg.id
     # Layer 2: loop guard (Layer 1 is inside gate.decide)
     if loopguard.record_turn(root, msg.is_from_bot):
-        mm_client.post_thread_notice(msg.channel_id, root, "⏸ Paused — human turn needed.")
+        await asyncio.to_thread(mm_client.post_thread_notice, msg.channel_id, root, "⏸ Paused — human turn needed.")
         return
     # gate.decide is sync+blocking (GraphN round-trip); run it in a thread
     verdict = await asyncio.to_thread(gate.decide, msg)
     if verdict.kind == VerdictKind.AUTO_SEND:
-        mm_client.post_reply(msg.channel_id, root, verdict.reply)
+        await asyncio.to_thread(mm_client.post_reply, msg.channel_id, root, verdict.reply)
     else:
         draft = Draft(
             id=drafts.new_id(),
@@ -27,7 +27,7 @@ async def handle_message(msg: Message) -> None:
             trigger_text=msg.text,
         )
         drafts.put(draft)
-        mm_client.post_card(msg.user_id, draft)
+        await asyncio.to_thread(mm_client.post_card, msg.user_id, draft)
 
 
 async def main() -> None:

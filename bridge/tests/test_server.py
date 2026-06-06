@@ -78,3 +78,15 @@ def test_discard_removes_draft():
     with patch.object(mm_client, "post_reply", return_value={}):
         client.post("/aegis/discard", json={"context": {"draft_id": "d4"}})
     assert drafts.claim("d4") is None
+
+
+def test_approve_restores_draft_if_post_reply_fails():
+    """If post_reply raises, draft is restored so the user can retry."""
+    from fastapi.testclient import TestClient as _TC
+    _client = _TC(app, raise_server_exceptions=False)
+    _seed_draft("d5")
+    with patch.object(mm_client, "post_reply", side_effect=Exception("MM down")):
+        resp = _client.post("/aegis/approve", json={"context": {"draft_id": "d5"}})
+    assert resp.status_code == 500
+    # draft must be back in the store so user can retry
+    assert drafts.claim("d5") is not None

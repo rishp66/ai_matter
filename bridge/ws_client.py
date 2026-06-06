@@ -48,7 +48,12 @@ async def listen(on_message):
                     msg = parse_posted_event(event)
                     if msg is None or msg.user_id == config.MM_BOT_USER_ID:
                         continue
-                    await on_message(msg)
+                    try:
+                        await on_message(msg)
+                    except asyncio.CancelledError:
+                        raise  # clean shutdown — let it propagate
+                    except Exception as exc:
+                        print(f"handle_message error (message dropped): {exc}")
         except (websockets.exceptions.ConnectionClosed, OSError) as exc:
             delay = backoff_seconds(attempt)
             print(f"WS disconnected ({exc}); reconnecting in {delay:.0f}s …")

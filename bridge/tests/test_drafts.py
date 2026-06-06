@@ -21,6 +21,8 @@ def _make_draft(draft_id: str = "abc123") -> Draft:
         reason="referenced 2 private sources",
         provenance=["doc-a", "doc-b"],
         trigger_text="What is my salary?",
+        owner_user_id="user-1",
+        contexts=[],
     )
 
 

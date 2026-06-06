@@ -65,6 +65,8 @@ def test_post_card_has_two_actions(monkeypatch):
         reason="referenced 1 private source",
         provenance=[],
         trigger_text="What?",
+        owner_user_id="user-1",
+        contexts=[],
     )
 
     mock_client = MagicMock()
@@ -96,6 +98,8 @@ def test_post_card_action_urls(monkeypatch):
         reason="referenced 2 private sources",
         provenance=[],
         trigger_text="?",
+        owner_user_id="user-2",
+        contexts=[],
     )
 
     mock_client = MagicMock()
@@ -128,6 +132,8 @@ def test_post_card_context_has_draft_id(monkeypatch):
         reason="r",
         provenance=[],
         trigger_text="t",
+        owner_user_id="u",
+        contexts=[],
     )
 
     mock_client = MagicMock()

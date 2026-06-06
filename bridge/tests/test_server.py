@@ -28,6 +28,8 @@ def _seed_draft(draft_id: str = "draft-abc") -> Draft:
         reason="referenced 1 private source",
         provenance=["doc-1"],
         trigger_text="What is the answer?",
+        owner_user_id="user-1",
+        contexts=[],
     )
     drafts.put(d)
     return d

@@ -1,6 +1,8 @@
 // Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
 // See LICENSE.txt for license information.
 
+import {Client4} from 'mattermost-redux/client';
+
 import {notifyMe} from 'actions/notification_actions';
 import {openModal} from 'actions/views/modals';
 import {closeRightHandSide, selectPostById} from 'actions/views/rhs';
@@ -197,3 +199,6 @@ window.ProductApi = {
 
 // Desktop App module containing the app info and a series of helpers to work with legacy code
 window.DesktopApp = DesktopApp;
+
+// Expose the MM Client4 singleton for AEGIS plugin (and any other plugins that need it)
+(window as any).MattermostClient4 = Client4;

@@ -13,7 +13,10 @@ import pytest
 from fastapi.testclient import TestClient
 from bridge import drafts, mm_client
 from bridge.drafts import Draft
-from bridge.server import app
+from bridge.server import app, get_user_id
+
+# Override auth dependency for all tests in this module
+app.dependency_overrides[get_user_id] = lambda: "test-user"
 
 client = TestClient(app)
 
@@ -92,3 +95,15 @@ def test_approve_restores_draft_if_post_reply_fails():
     assert resp.status_code == 500
     # draft must be back in the store so user can retry
     assert drafts.claim("d5") is not None
+
+
+def test_cors_preflight():
+    resp = client.options(
+        "/aegis/approve",
+        headers={
+            "Origin": "http://localhost:8065",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert resp.status_code in (200, 204)
+    assert "access-control-allow-origin" in resp.headers

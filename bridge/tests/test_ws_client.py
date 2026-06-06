@@ -13,7 +13,7 @@ with patch.dict("os.environ", {
     "GRAPHN_WF_PUBLIC": "wf-pub",
     "GRAPHN_WF_PRIVATE": "wf-priv",
 }):
-    from bridge.ws_client import parse_posted_event
+    from bridge.ws_client import parse_posted_event, backoff_seconds
 from bridge.models import Message
 
 
@@ -63,3 +63,22 @@ def test_root_id_preserved():
     post_json = make_post(root_id="r1")
     msg = parse_posted_event(make_event(post_json))
     assert msg.root_id == "r1"
+
+
+def test_backoff_seconds_starts_at_one():
+    assert backoff_seconds(0) == 1.0
+
+
+def test_backoff_seconds_doubles():
+    assert backoff_seconds(1) == 2.0
+    assert backoff_seconds(2) == 4.0
+    assert backoff_seconds(3) == 8.0
+
+
+def test_backoff_seconds_caps_at_max():
+    assert backoff_seconds(10) == 30.0
+    assert backoff_seconds(100) == 30.0
+
+
+def test_backoff_seconds_custom_max():
+    assert backoff_seconds(10, max_seconds=5.0) == 5.0

@@ -36,11 +36,36 @@ class ActionRequest(BaseModel):
     context: ActionContext
 
 
+class SendRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    draft_id: str
+    text: str
+
+
+@app.get("/aegis/drafts")
+def list_drafts(user_id: str = Depends(get_user_id)) -> list[dict]:
+    return [
+        {
+            "id": d.id,
+            "reply": d.reply,
+            "reason": d.reason,
+            "provenance": d.provenance,
+            "contexts": d.contexts,
+            "trigger_text": d.trigger_text,
+            "channel_id": d.target_channel_id,
+        }
+        for d in drafts.list_for_owner(user_id)
+    ]
+
+
 @app.post("/aegis/approve")
 def approve(req: ActionRequest, user_id: str = Depends(get_user_id)) -> dict:
     draft = drafts.claim(req.context.draft_id)
     if draft is None:
         return {"update": {"message": "_Already handled._"}}
+    if draft.owner_user_id != user_id:
+        drafts.put(draft)  # restore — wrong owner
+        raise HTTPException(status_code=403, detail="Not your draft")
     try:
         mm_client.post_reply(
             channel_id=draft.target_channel_id,
@@ -55,5 +80,26 @@ def approve(req: ActionRequest, user_id: str = Depends(get_user_id)) -> dict:
 
 @app.post("/aegis/discard")
 def discard(req: ActionRequest, user_id: str = Depends(get_user_id)) -> dict:
-    drafts.claim(req.context.draft_id)  # atomic pop — drops it
+    draft = drafts.claim(req.context.draft_id)
+    if draft is None:
+        return {"update": {"message": "_Already handled._"}}
+    if draft.owner_user_id != user_id:
+        drafts.put(draft)  # restore — wrong owner
+        raise HTTPException(status_code=403, detail="Not your draft")
     return {"update": {"message": "🗑 Discarded.", "props": {}}}
+
+
+@app.post("/aegis/send")
+def send(req: SendRequest, user_id: str = Depends(get_user_id)) -> dict:
+    draft = drafts.claim(req.draft_id)
+    if draft is None:
+        return {"update": {"message": "_Already handled._"}}
+    if draft.owner_user_id != user_id:
+        drafts.put(draft)  # restore — wrong owner
+        raise HTTPException(status_code=403, detail="Not your draft")
+    try:
+        mm_client.post_reply(draft.target_channel_id, draft.root_id, req.text)
+    except Exception:
+        drafts.put(draft)
+        raise
+    return {"update": {"message": "✓ Sent to channel.", "props": {}}}

@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, Header
+from fastapi import FastAPI, Depends, HTTPException, Header, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict
 
-from bridge import config, drafts, mm_client, mm_auth
+from bridge import config, drafts, mm_client, mm_auth, graphn_control_client
 
 app = FastAPI()
 
@@ -87,6 +87,44 @@ def discard(req: ActionRequest, user_id: str = Depends(get_user_id)) -> dict:
         drafts.put(draft)  # restore — wrong owner
         raise HTTPException(status_code=403, detail="Not your draft")
     return {"update": {"message": "🗑 Discarded.", "props": {}}}
+
+
+def _resolve_kb(scope: str) -> str:
+    """Resolve scope to KB id from config. Raises 404 on unknown scope."""
+    if scope == "public":
+        return config.GRAPHN_KB_PUBLIC
+    if scope == "private":
+        return config.GRAPHN_KB_PRIVATE
+    raise HTTPException(status_code=404, detail=f"Unknown KB scope: {scope}")
+
+
+@app.get("/aegis/kb/{scope}/documents")
+def list_kb_documents(scope: str, user_id: str = Depends(get_user_id)) -> list[dict]:
+    kb_id = _resolve_kb(scope)
+    return graphn_control_client.list_documents(kb_id)
+
+
+@app.post("/aegis/kb/{scope}/documents")
+def upload_kb_document(
+    scope: str,
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_user_id),
+) -> dict:
+    kb_id = _resolve_kb(scope)
+    content = file.file.read()
+    return graphn_control_client.upload_document(
+        kb_id, file.filename or "upload", content, file.content_type or "application/octet-stream"
+    )
+
+
+@app.delete("/aegis/kb/{scope}/documents/{doc_id}", status_code=204)
+def delete_kb_document(
+    scope: str,
+    doc_id: str,
+    user_id: str = Depends(get_user_id),
+) -> None:
+    kb_id = _resolve_kb(scope)
+    graphn_control_client.delete_document(kb_id, doc_id)
 
 
 @app.post("/aegis/send")

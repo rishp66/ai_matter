@@ -11,7 +11,7 @@ os.environ.setdefault("GRAPHN_WF_PRIVATE", "wf-priv")
 from unittest.mock import patch, MagicMock
 import pytest
 from fastapi.testclient import TestClient
-from bridge import drafts, mm_client
+from bridge import drafts, mm_client, graphn_control_client
 from bridge.drafts import Draft
 from bridge.server import app, get_user_id
 
@@ -250,3 +250,35 @@ def test_discard_unknown_draft_returns_already_handled():
     resp = client.post("/aegis/discard", json={"context": {"draft_id": "gone"}})
     assert resp.status_code == 200
     assert "Already handled" in resp.json()["update"]["message"]
+
+
+# --- KB routes ---
+
+def test_list_kb_documents_public(monkeypatch):
+    monkeypatch.setattr(graphn_control_client, "list_documents", lambda kb_id: [{"id": "doc1"}])
+    resp = client.get("/aegis/kb/public/documents", headers={"Authorization": "Bearer fake"})
+    assert resp.status_code == 200
+    assert resp.json() == [{"id": "doc1"}]
+
+
+def test_list_kb_documents_unknown_scope():
+    resp = client.get("/aegis/kb/unknown/documents", headers={"Authorization": "Bearer fake"})
+    assert resp.status_code == 404
+
+
+def test_delete_kb_document(monkeypatch):
+    monkeypatch.setattr(graphn_control_client, "delete_document", lambda kb_id, doc_id: None)
+    resp = client.delete("/aegis/kb/public/documents/doc123", headers={"Authorization": "Bearer fake"})
+    assert resp.status_code == 204
+
+
+def test_upload_kb_document(monkeypatch):
+    monkeypatch.setattr(graphn_control_client, "upload_document",
+                        lambda kb_id, fn, content, ct: {"id": "new-doc", "filename": fn})
+    resp = client.post(
+        "/aegis/kb/public/documents",
+        files={"file": ("test.txt", b"hello world", "text/plain")},
+        headers={"Authorization": "Bearer fake"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["id"] == "new-doc"

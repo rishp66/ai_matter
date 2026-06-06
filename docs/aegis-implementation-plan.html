@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEGIS — MVP Implementation Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f7f5f0; --paper:#fffdf8; --ink:#1b1e22; --ink-2:#4d555d; --ink-3:#8b929a;
+    --line:#e4e0d6; --line-2:#d3cdbf;
+    --accent:#2f6b9a; --accent-soft:#eaf1f6;
+    --pub:#1f8a5b; --priv:#b07d12; --dng:#c0432e;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --disp:'Bricolage Grotesque',sans-serif;
+    --body:'Newsreader',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink-2);
+    font-family:var(--body);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 26px}
+
+  header.top{padding:70px 0 30px;border-bottom:1px solid var(--line-2)}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-bottom:16px}
+  h1{font-family:var(--disp);font-weight:700;font-size:clamp(34px,5.5vw,52px);letter-spacing:-.02em;
+    line-height:1.02;margin:0;color:var(--ink)}
+  .sub{font-size:20px;color:var(--ink-2);max-width:60ch;margin:16px 0 0}
+  .assume{margin-top:24px;font-family:var(--mono);font-size:13px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:8px 22px}
+  .assume b{color:var(--ink);font-weight:500}
+
+  .doc{display:grid;grid-template-columns:210px minmax(0,1fr);gap:50px;padding:46px 0 110px;align-items:start}
+  nav.toc{position:sticky;top:24px;font-family:var(--mono);font-size:12.5px}
+  nav.toc p{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3);margin:0 0 12px;padding-left:12px}
+  nav.toc a{display:block;color:var(--ink-3);text-decoration:none;padding:6px 0 6px 12px;border-left:2px solid var(--line);transition:.15s}
+  nav.toc a:hover{color:var(--ink-2)}
+  nav.toc a.on{color:var(--ink);border-color:var(--accent)}
+
+  main{min-width:0}
+  section{margin-bottom:52px;scroll-margin-top:24px}
+  .sh{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line-2);padding-bottom:12px;margin-bottom:18px}
+  .sh .num{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent);flex:none}
+  h2{font-family:var(--disp);font-weight:600;font-size:clamp(23px,3vw,30px);letter-spacing:-.01em;margin:0;color:var(--ink)}
+  .goal{font-style:italic;color:var(--ink-2);margin:0 0 14px}
+  h3{font-family:var(--disp);font-weight:600;font-size:18px;color:var(--ink);margin:26px 0 10px}
+  p{margin:0 0 14px}
+  strong{color:var(--ink);font-weight:500}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent}
+  a:hover{border-color:var(--accent)}
+  code{font-family:var(--mono);font-size:.84em;background:var(--paper);border:1px solid var(--line);
+    border-radius:4px;padding:1px 5px;color:#2a3138}
+
+  /* phase label */
+  .phase{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;
+    background:var(--ink);color:var(--bg);padding:3px 8px;border-radius:4px}
+
+  /* task checklist */
+  ul.tasks{list-style:none;margin:6px 0 16px;padding:0}
+  ul.tasks li{margin:0}
+  ul.tasks label{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:start;
+    padding:7px 0;cursor:pointer;color:var(--ink-2)}
+  ul.tasks input{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin-top:5px;
+    border:1.5px solid var(--line-2);border-radius:4px;background:var(--paper);cursor:pointer;position:relative;flex:none}
+  ul.tasks input:checked{background:var(--accent);border-color:var(--accent)}
+  ul.tasks input:checked::after{content:"✓";position:absolute;inset:0;color:#fff;font-size:11px;display:grid;place-items:center;font-family:var(--mono)}
+  ul.tasks input:checked + span{color:var(--ink-3);text-decoration:line-through}
+  ul.tasks span code{font-size:13px}
+
+  /* plain bullets */
+  ul.plain{list-style:none;margin:0 0 14px;padding:0}
+  ul.plain li{position:relative;padding-left:18px;margin-bottom:8px}
+  ul.plain li::before{content:"–";position:absolute;left:0;color:var(--ink-3)}
+
+  /* done-when */
+  .done{font-family:var(--mono);font-size:13px;color:var(--pub);border-top:1px dashed var(--line-2);
+    padding-top:12px;margin-top:10px}
+  .done b{color:var(--ink);letter-spacing:.04em}
+
+  /* callouts */
+  .note{border-left:3px solid var(--line-2);background:var(--paper);padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0}
+  .note.key{border-left-color:var(--accent);background:var(--accent-soft)}
+  .note.warn{border-left-color:var(--dng)}
+  .note .l{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--ink-3);margin-bottom:6px}
+  .note.key .l{color:var(--accent)} .note.warn .l{color:var(--dng)}
+  .note p:last-child{margin-bottom:0}
+
+  /* code */
+  .code{background:#1b1e22;border-radius:8px;margin:16px 0;overflow:hidden}
+  .code .lab{font-family:var(--mono);font-size:11px;color:#8b929a;padding:9px 14px;border-bottom:1px solid #2c3137}
+  .code pre{margin:0;padding:14px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.65;color:#d6dde3}
+  .code .c{color:#7d8893;font-style:italic}
+  .code .p{color:#9fc7e8}
+
+  /* tags inline */
+  .t{font-family:var(--mono);font-size:10.5px;font-weight:500;padding:2px 7px;border-radius:4px;border:1px solid var(--line-2);color:var(--ink-3);white-space:nowrap}
+  .t.req{color:var(--dng);border-color:#e3b8b0} .t.opt{color:var(--ink-3)} .t.pub{color:var(--pub);border-color:#bfe0cf} .t.priv{color:var(--priv);border-color:#e6d4a6}
+
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:15px}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+  td:first-child{font-family:var(--mono);font-size:12.5px;color:var(--ink);white-space:nowrap}
+
+  footer{border-top:1px solid var(--line-2);padding:26px 0 60px;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+
+  @media(max-width:880px){.doc{grid-template-columns:1fr;gap:0}nav.toc{display:none}body{font-size:17px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="kicker">AEGIS · MVP Implementation Plan</div>
+    <h1>From forked repo to working demo</h1>
+    <p class="sub">Build order for the Mattermost × GraphN personal agent. Sequenced so an end-to-end loop works before any React is touched, and so the team can parallelize after the first phase.</p>
+    <div class="assume">
+      <span><b>Start state:</b> Mattermost fork cloned</span>
+      <span><b>Backend:</b> GraphN account + CLI</span>
+      <span><b>Target:</b> one demo user, one channel</span>
+      <span><b>Fail-safe:</b> always DRAFT</span>
+    </div>
+  </header>
+
+  <div class="doc">
+    <nav class="toc">
+      <p>Phases</p>
+      <a href="#p0"><b>P0</b> &nbsp;Boot the fork</a>
+      <a href="#p1"><b>P1</b> &nbsp;Bot + bridge echo</a>
+      <a href="#p2"><b>P2</b> &nbsp;GraphN: KBs &amp; workflows</a>
+      <a href="#p3"><b>P3</b> &nbsp;The gate</a>
+      <a href="#p4"><b>P4</b> &nbsp;Approval card</a>
+      <a href="#p5"><b>P5</b> &nbsp;Loop prevention</a>
+      <a href="#p6"><b>P6</b> &nbsp;Polish &amp; webapp</a>
+      <a href="#cfg">Config quick-ref</a>
+      <a href="#team">Team split</a>
+      <a href="#demo">Demo script</a>
+    </nav>
+
+    <main>
+      <div class="note key">
+        <div class="l">Read first — the sequencing unlock</div>
+        <p>Native Mattermost <strong>message-attachment action buttons render on the stock fork UI</strong>. The whole approval loop (P1–P5) works with <strong>zero webapp changes</strong> — orchestration lives in a small bridge service. Forking the React webapp (P6) is polish, not a dependency. Don't start there.</p>
+      </div>
+
+      <!-- P0 -->
+      <section id="p0">
+        <div class="sh"><span class="num"></span><h2><span class="phase">P0</span> &nbsp;Boot the fork</h2></div>
+        <p class="goal">Goal: the forked Mattermost runs at <code>localhost:8065</code>, you can log in and post, and you know which half is server vs webapp.</p>
+        <ul class="tasks">
+          <li><label><input type="checkbox"><span>Install the toolchain: Go (version from <code>server/go.mod</code>), Node via NVM (from <code>webapp/.nvmrc</code>), Docker, and <code>make</code>.</span></label></li>
+          <li><label><input type="checkbox"><span>From the repo: <code>cd server && make run</code>. First run is slow — it spins Docker (Postgres, mail), builds the Go server, and starts the webapp watcher. Use <code>make run-server</code> to run server-only when debugging.</span></label></li>
+          <li><label><input type="checkbox"><span>Create an admin: <code>cd server && bin/mmctl user create --local --email a@b.co --username admin --password '…' --system-admin</code> (or the first-run setup page).</span></label></li>
+          <li><label><input type="checkbox"><span>Create a team and one <strong>demo channel</strong>; join it. This is your only target channel for the MVP.</span></label></li>
+        </ul>
+        <div class="note warn">
+          <div class="l">License gotcha</div>
+          <p>Forking obligates AGPL compliance and replacing the Mattermost name/logo per the trademark policy if you distribute or demo publicly. Fine for an internal hackathon — flag it before any public release.</p>
+        </div>
+        <p class="done"><b>DONE WHEN</b> — you can log into your local fork and post in the demo channel.</p>
+      </section>
+
+      <!-- P1 -->
+      <section id="p1">
+        <div class="sh"><span class="num"></span><h2><span class="phase">P1</span> &nbsp;Bot + bridge skeleton (echo)</h2></div>
+        <p class="goal">Goal: a bot hears messages and echoes a reply in-thread. No GraphN, no gate yet — prove the plumbing.</p>
+        <ul class="tasks">
+          <li><label><input type="checkbox"><span>In <code>server/config/config.json</code> set <code>ServiceSettings.EnableBotAccountCreation=true</code> and <code>EnableUserAccessTokens=true</code>; restart.</span></label></li>
+          <li><label><input type="checkbox"><span>Create a bot (System Console → Integrations → Bot Accounts, or <code>POST /api/v4/bots</code>), copy its token, and add the bot to the demo channel.</span></label></li>
+          <li><label><input type="checkbox"><span>Stand up the <strong>bridge</strong> — one small service (FastAPI or Express, your call). It opens a WebSocket to <code>ws://localhost:8065/api/v4/websocket</code>, sends the auth challenge with the bot token, and listens for <code>posted</code> events.</span></label></li>
+          <li><label><input type="checkbox"><span>On a human post in the demo channel, reply via <code>POST /api/v4/posts</code> in the same thread (<code>root_id</code>). Skip bot-authored posts so it doesn't echo itself.</span></label></li>
+        </ul>
+        <div class="code">
+          <div class="lab">bridge — websocket loop (shape)</div>
+<pre><span class="c"># authenticate, then react to posted events</span>
+ws.send({<span class="p">"seq"</span>:1,<span class="p">"action"</span>:<span class="p">"authentication_challenge"</span>,<span class="p">"data"</span>:{<span class="p">"token"</span>:BOT_TOKEN}})
+<span class="c"># on event: {"event":"posted","data":{"post":"{...json...}"}}</span>
+<span class="c"># parse post, ignore if post.props.from_bot, else reply in post.root_id or post.id</span></pre>
+        </div>
+        <p class="done"><b>DONE WHEN</b> — you post and the bot replies in-thread within ~1s.</p>
+      </section>
+
+      <!-- P2 -->
+      <section id="p2">
+        <div class="sh"><span class="num"></span><h2><span class="phase">P2</span> &nbsp;GraphN: KBs &amp; workflows</h2></div>
+        <p class="goal">Goal: two knowledge bases and two workflows, tested from the CLI, callable by the bridge via the gateway.</p>
+        <ul class="tasks">
+          <li><label><input type="checkbox"><span><code>graphn init</code> (API key + workspace), then <code>graphn whoami</code> to confirm.</span></label></li>
+          <li><label><input type="checkbox"><span>Create the two stores: <code>graphn kb create kb-public</code> and <code>graphn kb create kb-private</code>. Ingest a <em>tiny</em> demo corpus into each — one clearly public doc (FAQ / office hours), one clearly private (personal note). <code>graphn kb --help</code> for the ingest subcommand.</span></label></li>
+          <li><label><input type="checkbox"><span>Build two workflows — <code>wf-public</code> (retrieves <strong>kb-public only</strong>) and <code>wf-private</code> (kb-public + kb-private). Start from a RAG blueprint: <code>graphn blueprint list</code>, then <code>graphn scaffold</code> to adjust.</span></label></li>
+          <li><label><input type="checkbox"><span>Test both, then publish: <code>graphn workflow dry-run &lt;id&gt; --input '{"query":"office hours?"}'</code> → <code>graphn workflow publish &lt;id&gt;</code>.</span></label></li>
+          <li><label><input type="checkbox"><span>Set <code>GRAPHN_GATEWAY_URL</code> and confirm the bridge can invoke a workflow over the gateway and read back the <strong>answer + the sources/confidence it used</strong> (you need provenance, not just text).</span></label></li>
+        </ul>
+        <div class="note">
+          <div class="l">Why two physical KBs</div>
+          <p>Separate stores make provenance a yes/no fact ("did <code>wf-private</code> run / did kb-private return a chunk?") instead of an inference over labels. That's what makes the gate deterministic in P3.</p>
+        </div>
+        <p class="done"><b>DONE WHEN</b> — a public query answers off kb-public and a private query pulls a kb-private chunk, both invokable by the bridge.</p>
+      </section>
+
+      <!-- P3 -->
+      <section id="p3">
+        <div class="sh"><span class="num"></span><h2><span class="phase">P3</span> &nbsp;The gate (public-first / escalate-and-lock)</h2></div>
+        <p class="goal">Goal: the bridge decides <span class="t pub">AUTO_SEND</span> vs <span class="t priv">DRAFT</span> from retrieval provenance — and the auto-send path never loads private context.</p>
+        <ul class="tasks">
+          <li><label><input type="checkbox"><span>Replace the P1 echo: call <code>wf-public</code> first (kb-public only). If grounded <strong>and</strong> confidence ≥ threshold → <strong>AUTO_SEND</strong> (post to channel).</span></label></li>
+          <li><label><input type="checkbox"><span>Otherwise call <code>wf-private</code> → verdict is now <strong>locked to DRAFT</strong>, regardless of what the model does with the result. Retrieval, not usage, is the trigger.</span></label></li>
+          <li><label><input type="checkbox"><span>Record provenance (sources, private-hit count) on the verdict — the card uses it in P4.</span></label></li>
+          <li><label><input type="checkbox"><span>For now, render DRAFT as a plain "(held)" DM so you can watch routing. The real card is next.</span></label></li>
+          <li><label><input type="checkbox"><span>Tune the confidence threshold against the demo corpus until public Qs send and private Qs hold.</span></label></li>
+        </ul>
+        <div class="code">
+          <div class="lab">bridge/gate — decision</div>
+<pre><span class="c"># the auto-send compose never has kb-private in its window</span>
+pub = graphn.run(WF_PUBLIC, query, kb=[<span class="p">"kb-public"</span>])
+<span class="c">if</span> pub.grounded <span class="c">and</span> pub.confidence &gt;= CONF_MIN:
+    <span class="c">return</span> SEND(pub.text, provenance=pub.sources)
+<span class="c"># escalate — verdict is DRAFT from here, no matter what</span>
+priv = graphn.run(WF_PRIVATE, query, kb=[<span class="p">"kb-public"</span>,<span class="p">"kb-private"</span>])
+<span class="c">return</span> DRAFT(priv.text, reason=f<span class="p">"{priv.private_hits} private sources"</span>)</pre>
+        </div>
+        <p class="done"><b>DONE WHEN</b> — a public question auto-posts to the channel; a private question holds and never reaches the channel.</p>
+      </section>
+
+      <!-- P4 -->
+      <section id="p4">
+        <div class="sh"><span class="num"></span><h2><span class="phase">P4</span> &nbsp;Approval card</h2></div>
+        <p class="goal">Goal: held drafts surface as an interactive card with Approve / Discard — using attachment actions, no webapp changes.</p>
+        <ul class="tasks">
+          <li><label><input type="checkbox"><span>On DRAFT, the bot posts to the user's DM a post with <code>props.attachments[].actions</code> = Approve + Discard. Each action's <code>integration.url</code> points at a bridge endpoint; <code>context</code> carries draft_id, target channel, root thread, provenance.</span></label></li>
+          <li><label><input type="checkbox"><span>Bridge exposes <code>/aegis/approve</code> and <code>/aegis/discard</code>. Approve → post the stored reply to the target thread, then return an <code>update</code> that rewrites the card to "Sent ✓" with no buttons. Discard → update to "Discarded."</span></label></li>
+          <li><label><input type="checkbox"><span>Add the bridge host to <code>ServiceSettings.AllowedUntrustedInternalConnections</code> — the server must be allowed to call back to a localhost/private bridge, or button clicks silently fail.</span></label></li>
+        </ul>
+        <div class="note warn">
+          <div class="l">Known quirk</div>
+          <p>Updating an interactive post can drop its buttons. That's fine — every action resolves the card to a terminal, button-less state (Sent / Discarded), so buttons never need to survive an update.</p>
+        </div>
+        <p class="done"><b>DONE WHEN</b> — a held draft shows Approve/Discard; Approve posts it to the channel and the card flips to a terminal state.</p>
+      </section>
+
+      <!-- P5 -->
+      <section id="p5">
+        <div class="sh"><span class="num"></span><h2><span class="phase">P5</span> &nbsp;Loop prevention</h2></div>
+        <p class="goal">Goal: two agents can't talk each other into an infinite exchange.</p>
+        <ul class="tasks">
+          <li><label><input type="checkbox"><span><strong>Bot guard</strong> <span class="t req">required</span> — if an inbound post has <code>props.from_bot === "true"</code> (or sender ∈ known-bot set), force DRAFT, never auto-send. A loop needs two agents auto-sending; this breaks it. (Also stops self-echo.)</span></label></li>
+          <li><label><input type="checkbox"><span><strong>Depth counter</strong> <span class="t req">required</span> — in-memory map keyed by root post id, counting consecutive bot turns with no human between. Halt at <code>N=3</code> and post an ephemeral "paused — human turn needed." Any human post resets it.</span></label></li>
+          <li><label><input type="checkbox"><span><strong>Similarity break</strong> <span class="t opt">stretch</span> — if the last K bot replies in a thread exceed cosine similarity τ, halt. Catches degenerate repeats.</span></label></li>
+          <li><label><input type="checkbox"><span>Test by pointing two agents at each other in a thread; confirm it stops within N turns.</span></label></li>
+        </ul>
+        <p class="done"><b>DONE WHEN</b> — two agents halt after ≤3 turns and never auto-loop.</p>
+      </section>
+
+      <!-- P6 -->
+      <section id="p6">
+        <div class="sh"><span class="num"></span><h2><span class="phase">P6</span> &nbsp;Polish &amp; (optional) webapp fork</h2></div>
+        <p class="goal">Goal: make it demo-clean. Only now is it worth touching React.</p>
+        <ul class="tasks">
+          <li><label><input type="checkbox"><span>Provenance line on the card — "Held · referenced 2 private sources." <span class="t opt">cheap, high-impact</span></span></label></li>
+          <li><label><input type="checkbox"><span>Typing indicator while the workflow runs (perceived latency).</span></label></li>
+          <li><label><input type="checkbox"><span><strong>Custom post-type renderer</strong> <span class="t opt">webapp</span> — register <code>custom_aegis_draft</code> in <code>webapp/channels</code> for a card prettier than attachments; add a "Drafts" view and a Public/Private settings page. This is where the fork earns its keep.</span></label></li>
+          <li><label><input type="checkbox"><span><strong>Login-time warming</strong> <span class="t opt">diagram-faithful</span> — add a hook in the server login path to notify the bridge to scope the user's KBs. The simpler MVP path is lazy warm-on-first-message; only build the login hook if you have time.</span></label></li>
+        </ul>
+        <p class="done"><b>DONE WHEN</b> — the end-to-end story runs clean on stage.</p>
+      </section>
+
+      <!-- CONFIG -->
+      <section id="cfg">
+        <div class="sh"><span class="num"></span><h2>Config quick-ref</h2></div>
+        <p>Set in <code>server/config/config.json</code> (or System Console) and restart. These are the flags that block people on day one.</p>
+        <table>
+          <thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>EnableBotAccountCreation</td><td>true</td><td>Create the agent bot</td></tr>
+            <tr><td>EnableUserAccessTokens</td><td>true</td><td>Issue the bot's API token</td></tr>
+            <tr><td>AllowedUntrustedInternalConnections</td><td>bridge host</td><td>Server must call back to a localhost/private bridge for button actions</td></tr>
+            <tr><td>EnablePostUsernameOverride / IconOverride</td><td>true</td><td>Post "on behalf of {user}" with a label <span class="t opt">nicety</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- TEAM -->
+      <section id="team">
+        <div class="sh"><span class="num"></span><h2>Team split</h2></div>
+        <p>P0–P1 are the critical path — do them together. Once the bot echoes, the work forks cleanly and runs in parallel:</p>
+        <ul class="plain">
+          <li><strong>Track A — bridge / orchestration:</strong> P3, P4, P5. The bulk of the code.</li>
+          <li><strong>Track B — GraphN:</strong> P2 — KBs, the two workflows, threshold tuning. Independent of the bridge once the gateway contract is agreed.</li>
+          <li><strong>Track C — webapp (optional):</strong> P6 renderer + settings. Can start against a mocked <code>custom_aegis_draft</code> any time after P1.</li>
+        </ul>
+        <div class="note">
+          <div class="l">Lock this contract early</div>
+          <p>The bridge↔GraphN interface (input shape, and that responses return <strong>sources + confidence</strong>) is the seam between Tracks A and B. Agree it in P2 so both can build against it.</p>
+        </div>
+      </section>
+
+      <!-- DEMO -->
+      <section id="demo">
+        <div class="sh"><span class="num"></span><h2>Demo script (acceptance)</h2></div>
+        <p>If these three run clean, the MVP is done:</p>
+        <ul class="plain">
+          <li><strong>1 — Auto-send.</strong> Ask a public question in the channel → agent replies instantly. <em>"It never had to ask me."</em></li>
+          <li><strong>2 — Held draft.</strong> Ask something needing private context → agent holds; show the DM card with the provenance line; Approve → it posts. <em>"It caught that this touched my private notes."</em></li>
+          <li><strong>3 — Loop guard.</strong> Point a second agent at the first → it halts after N turns. <em>"No infinite loops."</em></li>
+        </ul>
+      </section>
+    </main>
+  </div>
+
+  <footer>AEGIS · Implementation Plan v0.1 · Forked Mattermost × GraphN · build order, not gospel</footer>
+</div>
+
+<script>
+  // TOC scrollspy only — kept minimal on purpose
+  const links = [...document.querySelectorAll('nav.toc a')];
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting){ links.forEach(l=>l.classList.remove('on')); const a=map.get(e.target.id); if(a)a.classList.add('on'); }
+  }), {rootMargin:'-15% 0px -75% 0px'});
+  document.querySelectorAll('main section').forEach(s => io.observe(s));
+</script>
+</body>
+</html>

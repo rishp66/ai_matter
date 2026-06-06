@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEGIS — Technical Design Document</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e13; --bg-2:#0c1118; --panel:#10171f; --panel-2:#131d27;
+    --line:#1c2832; --line-bright:#2b3d4b;
+    --ink:#e9eef3; --ink-2:#a6b3bf; --ink-3:#647281;
+    --public:#37d49b; --public-dim:rgba(55,212,155,.10); --public-line:rgba(55,212,155,.35);
+    --private:#f0b429; --private-dim:rgba(240,180,41,.10); --private-line:rgba(240,180,41,.38);
+    --danger:#f2616b; --danger-dim:rgba(242,97,107,.10);
+    --accent:#4ec8e8; --accent-dim:rgba(78,200,232,.12);
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --disp:'Bricolage Grotesque',sans-serif;
+    --body:'Newsreader',Georgia,serif;
+    --maxw:1180px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--body); font-size:18px; line-height:1.62; font-weight:400;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px,64px 64px;
+    background-position:-1px -1px,-1px -1px;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(120% 80% at 80% -10%,rgba(78,200,232,.06),transparent 60%),
+      radial-gradient(90% 70% at 0% 110%,rgba(240,180,41,.045),transparent 55%),
+      linear-gradient(180deg,rgba(10,14,19,.0),rgba(10,14,19,.55));
+  }
+  /* scroll progress */
+  #progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:50;
+    background:linear-gradient(90deg,var(--public),var(--accent));box-shadow:0 0 12px var(--accent)}
+
+  .wrap{position:relative;z-index:1;max-width:var(--maxw);margin:0 auto;padding:0 28px}
+
+  /* ---------- COVER ---------- */
+  .cover{padding:96px 0 56px;border-bottom:1px solid var(--line);position:relative}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--accent);display:flex;gap:14px;align-items:center;margin-bottom:30px}
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--public);box-shadow:0 0 10px var(--public)}
+  .codename{font-family:var(--disp);font-weight:800;font-size:clamp(64px,13vw,158px);line-height:.86;
+    letter-spacing:-.03em;margin:0;color:var(--ink);
+    background:linear-gradient(180deg,#fff,#9fb0bd);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .codename sup{font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:0;
+    -webkit-text-fill-color:var(--ink-3);vertical-align:super;margin-left:8px}
+  .lede{font-family:var(--body);font-size:clamp(20px,2.4vw,27px);line-height:1.4;color:var(--ink-2);
+    max-width:30ch;margin:28px 0 0;font-weight:300}
+  .lede b{color:var(--ink);font-weight:500}
+  .meta{margin-top:48px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .meta div{background:var(--bg-2);padding:16px 18px}
+  .meta dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+  .meta dd{margin:6px 0 0;font-family:var(--mono);font-size:13.5px;color:var(--ink);font-weight:500}
+  .meta dd.go{color:var(--public)}
+
+  /* ---------- LAYOUT ---------- */
+  .doc{display:grid;grid-template-columns:230px minmax(0,1fr);gap:54px;padding:64px 0 120px;align-items:start}
+  nav.toc{position:sticky;top:28px;align-self:start;font-family:var(--mono);font-size:12.5px;max-height:calc(100vh - 56px);overflow:auto}
+  nav.toc .tt{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-3);margin:0 0 16px;padding-left:14px}
+  nav.toc a{display:block;color:var(--ink-3);text-decoration:none;padding:7px 0 7px 14px;
+    border-left:2px solid var(--line);transition:.18s;line-height:1.35}
+  nav.toc a .n{color:var(--ink-3);margin-right:9px}
+  nav.toc a:hover{color:var(--ink-2);border-color:var(--line-bright)}
+  nav.toc a.on{color:var(--ink);border-color:var(--accent)}
+  nav.toc a.on .n{color:var(--accent)}
+
+  main{min-width:0}
+  section{margin-bottom:72px;scroll-margin-top:28px}
+  .sec-head{display:flex;align-items:baseline;gap:18px;margin:0 0 8px;
+    padding-bottom:18px;border-bottom:1px solid var(--line)}
+  .sec-num{font-family:var(--mono);font-size:14px;color:var(--accent);font-weight:700;flex:none;padding-top:6px}
+  h2{font-family:var(--disp);font-weight:700;font-size:clamp(28px,3.6vw,40px);letter-spacing:-.02em;
+    margin:0;line-height:1.05;color:var(--ink)}
+  h3{font-family:var(--disp);font-weight:600;font-size:21px;letter-spacing:-.01em;color:var(--ink);
+    margin:38px 0 12px}
+  h4{font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-2);margin:26px 0 10px}
+  p{margin:0 0 16px;color:var(--ink-2)}
+  p strong,li strong{color:var(--ink);font-weight:500}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-dim)}
+  a:hover{border-color:var(--accent)}
+  ul,ol{margin:0 0 18px;padding-left:0;list-style:none}
+  li{position:relative;padding-left:26px;margin-bottom:11px;color:var(--ink-2)}
+  ul li::before{content:"";position:absolute;left:4px;top:13px;width:6px;height:6px;
+    background:var(--accent);transform:rotate(45deg)}
+  ol{counter-reset:li}
+  ol li::before{counter-increment:li;content:counter(li);position:absolute;left:0;top:1px;
+    font-family:var(--mono);font-size:11px;color:var(--accent);border:1px solid var(--line-bright);
+    width:18px;height:18px;display:grid;place-items:center;border-radius:4px}
+  ol li{padding-left:30px}
+
+  code{font-family:var(--mono);font-size:.86em;background:var(--panel);color:#cfe8f3;
+    padding:2px 6px;border-radius:5px;border:1px solid var(--line)}
+
+  /* tags / pills */
+  .tag{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.06em;
+    padding:3px 9px;border-radius:5px;border:1px solid var(--line-bright);color:var(--ink-2);white-space:nowrap;display:inline-block}
+  .tag.pub{color:var(--public);border-color:var(--public-line);background:var(--public-dim)}
+  .tag.priv{color:var(--private);border-color:var(--private-line);background:var(--private-dim)}
+  .tag.dng{color:var(--danger);border-color:rgba(242,97,107,.4);background:var(--danger-dim)}
+  .tag.acc{color:var(--accent);border-color:rgba(78,200,232,.4);background:var(--accent-dim)}
+
+  /* callouts */
+  .call{border:1px solid var(--line);border-left-width:3px;border-radius:0 10px 10px 0;
+    background:var(--panel);padding:20px 24px;margin:24px 0}
+  .call .lab{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:9px}
+  .call p:last-child{margin-bottom:0}
+  .call.decision{border-left-color:var(--accent)} .call.decision .lab{color:var(--accent)}
+  .call.failsafe{border-left-color:var(--public);background:linear-gradient(90deg,var(--public-dim),var(--panel) 40%)}
+  .call.failsafe .lab{color:var(--public)}
+  .call.risk{border-left-color:var(--danger)} .call.risk .lab{color:var(--danger)}
+  .call.note{border-left-color:var(--private)} .call.note .lab{color:var(--private)}
+
+  /* cards grid */
+  .cards{display:grid;gap:16px;margin:24px 0}
+  .g2{grid-template-columns:1fr 1fr}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px 24px;transition:.2s}
+  .card:hover{border-color:var(--line-bright);transform:translateY(-2px)}
+  .card h4{margin-top:0}
+  .card.pub{border-top:2px solid var(--public-line)}
+  .card.priv{border-top:2px solid var(--private-line)}
+  .card p:last-child{margin-bottom:0}
+
+  /* code blocks */
+  .code{background:#070b0f;border:1px solid var(--line);border-radius:12px;margin:22px 0;overflow:hidden}
+  .code .bar{display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.05em}
+  .code .bar .lights{display:flex;gap:6px;margin-right:6px}
+  .code .bar .lights i{width:9px;height:9px;border-radius:50%;background:var(--line-bright)}
+  .code pre{margin:0;padding:18px 20px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.7;color:#c6d3dd}
+  .code .c{color:var(--ink-3);font-style:italic}      /* comment */
+  .code .k{color:#7fb4ff}                              /* keyword */
+  .code .s{color:var(--public)}                        /* string */
+  .code .f{color:var(--private)}                       /* function/field */
+  .code .v{color:#e9eef3}                              /* verdict */
+  .code .pubv{color:var(--public);font-weight:700}
+  .code .privv{color:var(--private);font-weight:700}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse;margin:22px 0;font-size:15px}
+  th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-2)}
+  th{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+  td:first-child{color:var(--ink);font-family:var(--mono);font-size:13px;white-space:nowrap}
+  tbody tr:hover{background:var(--bg-2)}
+  .ph{font-family:var(--mono);color:var(--accent);font-weight:700}
+
+  /* diagrams */
+  .fig{margin:30px 0;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,var(--panel),var(--bg-2));
+    padding:30px 24px}
+  .fig svg{width:100%;height:auto;display:block}
+  .fig figcaption{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);text-align:center;margin-top:18px;letter-spacing:.04em}
+  .sv-box{fill:var(--panel);stroke:var(--line-bright);stroke-width:1.5}
+  .sv-lab{font-family:'JetBrains Mono',monospace;font-size:12px;fill:var(--ink)}
+  .sv-sub{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--ink-3)}
+  .sv-edge{stroke:var(--line-bright);stroke-width:1.6;fill:none}
+  .sv-pub{stroke:var(--public)} .sv-priv{stroke:var(--private)} .sv-dng{stroke:var(--danger)}
+
+  /* reveal */
+  .rv{opacity:0;transform:translateY(14px);animation:rise .7s cubic-bezier(.2,.7,.3,1) forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+
+  footer{border-top:1px solid var(--line);padding:40px 0 70px;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+  footer .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
+
+  @media(max-width:900px){
+    .doc{grid-template-columns:1fr;gap:0}
+    nav.toc{display:none}
+    .g2{grid-template-columns:1fr}
+    body{font-size:17px}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<div class="wrap">
+  <!-- ============ COVER ============ -->
+  <header class="cover rv">
+    <div class="eyebrow"><span class="dot"></span> Technical Design Document &nbsp;·&nbsp; Hackathon MVP</div>
+    <h1 class="codename">AEGIS<sup>codename — placeholder</sup></h1>
+    <p class="lede">A personal agent that lives inside <b>Mattermost</b>, replies on your behalf, and <b>never lets private context out the door without your sign-off</b>.</p>
+
+    <dl class="meta">
+      <div><dt>Status</dt><dd class="go">DRAFT · FOR REVIEW</dd></div>
+      <div><dt>Version</dt><dd>0.1</dd></div>
+      <div><dt>Frontend</dt><dd>Forked Mattermost</dd></div>
+      <div><dt>Agent backend</dt><dd>GraphN</dd></div>
+      <div><dt>Target</dt><dd>Single-demo MVP</dd></div>
+      <div><dt>Date</dt><dd>Jun 2026</dd></div>
+    </dl>
+  </header>
+
+  <div class="doc">
+    <!-- ============ TOC ============ -->
+    <nav class="toc rv">
+      <p class="tt">Contents</p>
+      <a href="#s1"><span class="n">01</span>Overview &amp; goals</a>
+      <a href="#s2"><span class="n">02</span>System architecture</a>
+      <a href="#s3"><span class="n">03</span>Context model</a>
+      <a href="#s4"><span class="n">04</span>The context gate</a>
+      <a href="#s5"><span class="n">05</span>Approval UX</a>
+      <a href="#s6"><span class="n">06</span>Loop prevention</a>
+      <a href="#s7"><span class="n">07</span>The fork</a>
+      <a href="#s8"><span class="n">08</span>Scope &amp; milestones</a>
+      <a href="#s9"><span class="n">09</span>Risks &amp; open questions</a>
+      <a href="#s10"><span class="n">10</span>Appendix — sketches</a>
+    </nav>
+
+    <main>
+      <!-- ===== 1 ===== -->
+      <section id="s1">
+        <div class="sec-head"><span class="sec-num">01</span><h2>Overview &amp; goals</h2></div>
+        <p>AEGIS turns a Mattermost account into a personal agent. Incoming messages are routed through a <strong>GraphN workflow</strong> that retrieves the user's context and produces a reply. The agent then does one of two things, with no per-message configuration from the user:</p>
+        <div class="cards g2">
+          <div class="card pub">
+            <h4><span class="tag pub">AUTO-SEND</span></h4>
+            <p>The reply was composed using <strong>public context only</strong>. Low friction, no interruption — it goes out immediately.</p>
+          </div>
+          <div class="card priv">
+            <h4><span class="tag priv">DRAFT + HOLD</span></h4>
+            <p>Composing the reply required <strong>private context</strong>. The agent drafts and holds for the user's explicit approval before anything leaves.</p>
+          </div>
+        </div>
+
+        <div class="call failsafe">
+          <div class="lab">◆ North star</div>
+          <p><strong>Maximize auto-send while never auto-sending anything that touched private context.</strong> That asymmetry is the whole product. The fail-safe is <em>always</em> DRAFT — never SEND. Every ambiguous case, low-confidence retrieval, or unexpected state resolves to a held draft.</p>
+        </div>
+
+        <h3>Goals</h3>
+        <ul>
+          <li><strong>Seamless transition.</strong> The user never picks "public" or "private" per message. The system decides from what the reply was actually built on, and only interrupts when private information would otherwise leak.</li>
+          <li><strong>Safe by construction, not by classifier.</strong> The auto-send path must be incapable of leaking private data — not merely unlikely to. (See <a href="#s4">§04</a>.)</li>
+          <li><strong>Explainable holds.</strong> When a draft is held, the user sees <em>why</em> — e.g. "referenced 2 private sources."</li>
+          <li><strong>Loop-proof.</strong> Two agents must never talk each other into an infinite exchange. (See <a href="#s6">§06</a>.)</li>
+        </ul>
+
+        <h3>Non-goals (MVP)</h3>
+        <ul>
+          <li>Multi-tenant onboarding, RBAC, or polished KB-management UI.</li>
+          <li>True user impersonation — the MVP posts as a clearly-labeled bot "on behalf of {user}" (see <a href="#s9">§09</a>).</li>
+          <li>Open Claw as a second runtime. <strong>GraphN is the single backend</strong> for the MVP — it gives more specific, deployable control over the workflow.</li>
+          <li>Mobile, federation, audit-log persistence.</li>
+        </ul>
+      </section>
+
+      <!-- ===== 2 ===== -->
+      <section id="s2">
+        <div class="sec-head"><span class="sec-num">02</span><h2>System architecture</h2></div>
+        <p>Three moving parts. The fork owns the surface the user sees and the login hook; GraphN owns the brains; a thin <strong>bridge</strong> service glues them and is where most hackathon code lives.</p>
+
+        <figure class="fig rv">
+          <svg viewBox="0 0 980 470" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="var(--line-bright)"/>
+              </marker>
+              <marker id="ahp" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="var(--public)"/>
+              </marker>
+            </defs>
+
+            <!-- User -->
+            <rect class="sv-box" x="20" y="190" width="120" height="86" rx="12"/>
+            <text class="sv-lab" x="80" y="228" text-anchor="middle">User</text>
+            <text class="sv-sub" x="80" y="248" text-anchor="middle">Mattermost</text>
+
+            <!-- Forked Mattermost -->
+            <rect class="sv-box" x="200" y="120" width="220" height="230" rx="14" stroke="var(--line-bright)"/>
+            <text class="sv-sub" x="216" y="146" fill="var(--accent)">FORKED MATTERMOST</text>
+            <rect class="sv-box" x="222" y="160" width="176" height="46" rx="9"/>
+            <text class="sv-sub" x="310" y="182" text-anchor="middle" fill="var(--ink)">webapp · React/Redux</text>
+            <text class="sv-sub" x="310" y="197" text-anchor="middle">draft card · settings</text>
+            <rect class="sv-box" x="222" y="216" width="176" height="46" rx="9"/>
+            <text class="sv-sub" x="310" y="238" text-anchor="middle" fill="var(--ink)">server · Go</text>
+            <text class="sv-sub" x="310" y="253" text-anchor="middle">login hook · endpoints</text>
+            <rect class="sv-box" x="222" y="272" width="176" height="46" rx="9"/>
+            <text class="sv-sub" x="310" y="294" text-anchor="middle" fill="var(--ink)">bot account</text>
+            <text class="sv-sub" x="310" y="309" text-anchor="middle">WebSocket events</text>
+
+            <!-- Bridge -->
+            <rect class="sv-box" x="470" y="180" width="150" height="106" rx="14" stroke="var(--accent)"/>
+            <text class="sv-sub" x="545" y="206" text-anchor="middle" fill="var(--accent)">BRIDGE</text>
+            <text class="sv-sub" x="545" y="228" text-anchor="middle" fill="var(--ink)">orchestration</text>
+            <text class="sv-sub" x="545" y="245" text-anchor="middle">gate routing</text>
+            <text class="sv-sub" x="545" y="262" text-anchor="middle">loop counters</text>
+
+            <!-- GraphN -->
+            <rect class="sv-box" x="680" y="60" width="280" height="350" rx="14" stroke="var(--line-bright)"/>
+            <text class="sv-sub" x="700" y="86" fill="var(--accent)">GRAPHN WORKFLOW</text>
+            <rect class="sv-box" x="702" y="100" width="236" height="40" rx="9"/>
+            <text class="sv-sub" x="820" y="125" text-anchor="middle" fill="var(--ink)">agent · functions · MCP servers</text>
+            <rect class="sv-box" x="702" y="150" width="112" height="78" rx="9" stroke="var(--public-line)"/>
+            <text class="sv-sub" x="758" y="184" text-anchor="middle" fill="var(--public)">kb-public</text>
+            <text class="sv-sub" x="758" y="200" text-anchor="middle">auto-shareable</text>
+            <rect class="sv-box" x="826" y="150" width="112" height="78" rx="9" stroke="var(--private-line)"/>
+            <text class="sv-sub" x="882" y="184" text-anchor="middle" fill="var(--private)">kb-private</text>
+            <text class="sv-sub" x="882" y="200" text-anchor="middle">gated</text>
+            <rect class="sv-box" x="702" y="240" width="236" height="56" rx="9" stroke="var(--public-line)"/>
+            <text class="sv-sub" x="820" y="265" text-anchor="middle" fill="var(--ink)">provenance gate</text>
+            <text class="sv-sub" x="820" y="281" text-anchor="middle">public-only → SEND · else DRAFT</text>
+            <rect class="sv-box" x="702" y="306" width="236" height="40" rx="9"/>
+            <text class="sv-sub" x="820" y="331" text-anchor="middle">gateway · dry-run · publish</text>
+
+            <!-- edges -->
+            <path class="sv-edge" d="M140,233 H198" marker-end="url(#ah)"/>
+            <text class="sv-sub" x="170" y="225" text-anchor="middle">login</text>
+            <path class="sv-edge" d="M420,233 H468" marker-end="url(#ah)"/>
+            <text class="sv-sub" x="444" y="225" text-anchor="middle">post</text>
+            <path class="sv-edge" d="M620,233 H678" marker-end="url(#ah)"/>
+            <text class="sv-sub" x="649" y="225" text-anchor="middle">run</text>
+            <!-- return path public -->
+            <path class="sv-edge sv-pub" d="M678,360 C560,440 300,440 218,360" marker-end="url(#ahp)"/>
+            <text class="sv-sub" x="448" y="432" text-anchor="middle" fill="var(--public)">verdict + reply → send · or draft card</text>
+          </svg>
+          <figcaption>Fig 1 — One inbound message: login warms context, the bridge runs the GraphN workflow, the gate returns a verdict, and the bridge either sends or posts a held draft.</figcaption>
+        </figure>
+
+        <h3>Components</h3>
+        <table>
+          <thead><tr><th>Component</th><th>Owns</th><th>Net-new code</th></tr></thead>
+          <tbody>
+            <tr><td>Forked Mattermost</td><td>UI surface (draft card, drafts inbox, public/private settings), login hook, bot identity, custom REST endpoints</td><td>Medium — isolated <code>aegis/</code> package + webapp components</td></tr>
+            <tr><td>Bridge</td><td>Subscribes to WebSocket post events, calls the GraphN gateway, applies the gate verdict, posts replies or draft cards, handles button callbacks, holds loop counters</td><td><strong>High</strong> — most logic lives here</td></tr>
+            <tr><td>GraphN workflow</td><td>Retrieval over <code>kb-public</code> / <code>kb-private</code>, tool/MCP calls, response composition, provenance gate verdict</td><td>Low — config + DSL, deployed via CLI</td></tr>
+          </tbody>
+        </table>
+
+        <div class="call decision">
+          <div class="lab">▸ Decision — keep orchestration in the bridge, not the fork</div>
+          <p>The fork carries UI + thin hooks/endpoints; all GraphN-calling and gate logic lives in a <strong>separate bridge service</strong>. This keeps fork changes minimal (less merge debt), lets the team write the bridge in any language and iterate fast, and gives a single, instrumented choke point for every private-data access. Overrule if you'd rather embed it in the Go server.</p>
+        </div>
+      </section>
+
+      <!-- ===== 3 ===== -->
+      <section id="s3">
+        <div class="sec-head"><span class="sec-num">03</span><h2>Context model</h2></div>
+        <p>Context is split into two GraphN <strong>knowledge bases</strong> rather than one KB with per-chunk tags. Two physically separate stores make provenance trivial: "did the reply touch <code>kb-private</code>?" is a yes/no fact about which store was queried, not an inference about a label.</p>
+
+        <div class="cards g2">
+          <div class="card pub">
+            <h4 style="color:var(--public)">kb-public</h4>
+            <p>User-determined sources the agent may share without asking: public channels, published docs, FAQ-style notes, anything the user has marked shareable. Grounding a reply <em>only</em> here is what earns AUTO-SEND.</p>
+          </div>
+          <div class="card priv">
+            <h4 style="color:var(--private)">kb-private</h4>
+            <p>The user's own private data: private notes, DMs, internal docs. Reachable <strong>only</strong> through a gated escalation step. Any retrieval from here forces DRAFT — no exceptions.</p>
+          </div>
+        </div>
+
+        <h3>Loaded on login</h3>
+        <p>The diagram's "loads context on login" arrow maps to the Mattermost server <code>UserHasLoggedIn</code> hook. On login the forked server notifies the bridge, which warms / scopes the user's two KB namespaces in GraphN and opens a session that maps <span class="tag">Mattermost user</span> → <span class="tag acc">GraphN workspace + KB namespaces + secrets</span>.</p>
+
+        <h3>"User Determined" tagging</h3>
+        <p>A settings surface in the fork's webapp lets the user assign sources/channels/notes to public or private, which populates the two KBs. <strong>Default everything to private until explicitly marked public</strong> — this makes mislabeling fail safe (an unmarked source is held, never auto-sent).</p>
+      </section>
+
+      <!-- ===== 4 ===== -->
+      <section id="s4">
+        <div class="sec-head"><span class="sec-num">04</span><h2>The context gate <span style="font-family:var(--mono);font-size:13px;color:var(--ink-3);font-weight:400">— hard problem #1</span></h2></div>
+        <p>The diagram's open question — <em>"how do we identify which context we're using?"</em> — is answered with <strong>retrieval provenance</strong>, not an LLM classifier. We don't ask a model to judge whether its own answer is "safe." We observe what the workflow actually grounded on and decide deterministically.</p>
+
+        <h3>Public-first, escalate-and-lock</h3>
+        <p>The key move: structure the workflow so the <strong>auto-send path never even loads private context</strong>. Then auto-send is safe <em>by construction</em>, not by trust.</p>
+        <ol>
+          <li><strong>Public-only compose.</strong> Attempt to answer using <code>kb-public</code> and public tools only. The private KB is not in this context window at all.</li>
+          <li><strong>Sufficient?</strong> If the public-only attempt grounds a confident answer → verdict <span class="tag pub">AUTO_SEND</span>.</li>
+          <li><strong>Escalate &amp; lock.</strong> If it's insufficient, escalate to a second compose that may query <code>kb-private</code> — and the verdict is now permanently <span class="tag priv">DRAFT</span>, regardless of how the model uses what it retrieved. <strong>Retrieval, not usage, is the trigger.</strong></li>
+          <li><strong>Abstain → DRAFT.</strong> Low-confidence / retriever abstains / ambiguous → <span class="tag priv">DRAFT</span> (fail-safe).</li>
+        </ol>
+
+        <figure class="fig rv">
+          <svg viewBox="0 0 940 360" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="g-ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--line-bright)"/></marker>
+              <marker id="g-pub" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--public)"/></marker>
+              <marker id="g-priv" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--private)"/></marker>
+              <marker id="g-dng" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--danger)"/></marker>
+            </defs>
+
+            <rect class="sv-box" x="20" y="150" width="140" height="60" rx="11"/>
+            <text class="sv-lab" x="90" y="178" text-anchor="middle">inbound</text>
+            <text class="sv-sub" x="90" y="195" text-anchor="middle">message</text>
+
+            <!-- bot guard -->
+            <rect class="sv-box" x="200" y="150" width="130" height="60" rx="11" stroke="var(--danger)"/>
+            <text class="sv-sub" x="265" y="176" text-anchor="middle" fill="var(--danger)">bot guard</text>
+            <text class="sv-sub" x="265" y="192" text-anchor="middle">from_bot?</text>
+
+            <!-- public compose -->
+            <rect class="sv-box" x="372" y="150" width="160" height="60" rx="11" stroke="var(--public-line)"/>
+            <text class="sv-sub" x="452" y="176" text-anchor="middle" fill="var(--ink)">public-only</text>
+            <text class="sv-sub" x="452" y="192" text-anchor="middle">compose</text>
+
+            <!-- diamond sufficient -->
+            <path class="sv-box" d="M620,120 L690,180 L620,240 L550,180 Z"/>
+            <text class="sv-sub" x="620" y="176" text-anchor="middle" fill="var(--ink)">grounded</text>
+            <text class="sv-sub" x="620" y="191" text-anchor="middle">&amp; confident?</text>
+
+            <!-- outcomes -->
+            <rect class="sv-box" x="770" y="40" width="150" height="56" rx="11" stroke="var(--public)"/>
+            <text class="sv-lab" x="845" y="67" text-anchor="middle" fill="var(--public)">AUTO_SEND</text>
+            <text class="sv-sub" x="845" y="84" text-anchor="middle">public only</text>
+
+            <rect class="sv-box" x="770" y="264" width="150" height="56" rx="11" stroke="var(--private)"/>
+            <text class="sv-lab" x="845" y="291" text-anchor="middle" fill="var(--private)">DRAFT</text>
+            <text class="sv-sub" x="845" y="308" text-anchor="middle">escalate / abstain</text>
+
+            <!-- edges -->
+            <path class="sv-edge" d="M160,180 H198" marker-end="url(#g-ah)"/>
+            <path class="sv-edge" d="M330,180 H370" marker-end="url(#g-ah)"/>
+            <path class="sv-edge" d="M532,180 H548" marker-end="url(#g-ah)"/>
+            <path class="sv-edge sv-pub" d="M690,160 C730,120 740,90 768,72" marker-end="url(#g-pub)"/>
+            <text class="sv-sub" x="730" y="120" fill="var(--public)">yes</text>
+            <path class="sv-edge sv-priv" d="M690,200 C730,240 740,270 768,288" marker-end="url(#g-priv)"/>
+            <text class="sv-sub" x="724" y="248" fill="var(--private)">no → escalate &amp; lock</text>
+            <!-- bot guard short circuit -->
+            <path class="sv-edge sv-dng" d="M265,150 C300,80 700,70 768,278" marker-end="url(#g-dng)" stroke-dasharray="5 4"/>
+            <text class="sv-sub" x="470" y="66" fill="var(--danger)">bot origin → force DRAFT (short-circuit)</text>
+          </svg>
+          <figcaption>Fig 2 — The gate. Bot-origin short-circuits to DRAFT; otherwise public-only compose decides. The auto-send branch never holds private context.</figcaption>
+        </figure>
+
+        <h3>Why provenance beats a classifier</h3>
+        <p>A classifier has a nonzero false-positive rate, and the one error AEGIS cannot tolerate is a <strong>false AUTO_SEND</strong> — auto-sending a reply that leaked private data. Provenance has <strong>no false AUTO_SEND by construction</strong>: if the private store was queried, that's a recorded fact, and the verdict is DRAFT. The composition model never gets a vote on whether to send.</p>
+
+        <div class="call note">
+          <div class="lab">⚠ The subtle trap — and the fix</div>
+          <p>A model could paraphrase private info it merely <em>saw</em> in-context even if "retrieval" didn't formally fire. The escalate-and-lock structure closes this: the auto-send compose <strong>never has <code>kb-private</code> in its window</strong>, and the moment we open the private store we've already committed to DRAFT. There is no path where private content reaches an auto-sent message.</p>
+        </div>
+
+        <div class="call decision">
+          <div class="lab">▸ Decision — one instrumented choke point for private access</div>
+          <p>Every route to private data (the private KB, any private/side-effecting MCP tool) must pass through the bridge's gated escalation. No ungated private source may exist. If it isn't reachable through the instrumented path, provenance can't see it — so it must not exist.</p>
+        </div>
+      </section>
+
+      <!-- ===== 5 ===== -->
+      <section id="s5">
+        <div class="sec-head"><span class="sec-num">05</span><h2>Approval UX</h2></div>
+        <p>A held draft surfaces to the user as a card — implemented with a Mattermost <strong>custom post type</strong> rendered by the forked webapp, with <strong>interactive message-attachment actions</strong> as the action backbone. The bot posts it in a DM / thread to the user, <em>never</em> in the target channel.</p>
+
+        <h3>Card anatomy</h3>
+        <ul>
+          <li><strong>Destination</strong> — where this would go (channel / recipient + the originating thread).</li>
+          <li><strong>Trigger</strong> — the incoming message that prompted the reply.</li>
+          <li><strong>Proposed reply</strong> — the drafted text.</li>
+          <li><strong>Provenance line</strong> — the explainability: <span class="tag priv">Held · referenced 2 private sources</span> or <span class="tag priv">Held · low confidence</span>.</li>
+          <li><strong>Actions</strong> — <code>Approve</code> · <code>Edit</code> · <code>Discard</code>.</li>
+        </ul>
+
+        <h4>Action mechanics</h4>
+        <p>Each button's <code>integration.url</code> points at a bridge endpoint, with state carried in the action <code>context</code> (draft id, target channel, root thread). On click:</p>
+        <ul>
+          <li><strong>Approve</strong> → bridge posts the reply to the target thread, then updates the card to a terminal "Sent" state with no buttons.</li>
+          <li><strong>Edit</strong> → opens an <strong>interactive dialog</strong> prefilled with the draft; submit re-posts the edited card or sends. <span class="tag">stretch</span></li>
+          <li><strong>Discard</strong> → bridge drops the draft and updates the card to "Discarded."</li>
+        </ul>
+
+        <div class="call note">
+          <div class="lab">⚠ Known Mattermost quirk</div>
+          <p>Updating an interactive post can drop its action buttons. That's fine here — every action resolves the card to a <strong>terminal, button-less state</strong> (Sent / Discarded), so we never need to keep buttons alive across an update.</p>
+        </div>
+      </section>
+
+      <!-- ===== 6 ===== -->
+      <section id="s6">
+        <div class="sec-head"><span class="sec-num">06</span><h2>Loop prevention <span style="font-family:var(--mono);font-size:13px;color:var(--ink-3);font-weight:400">— hard problem #2</span></h2></div>
+        <p>The diagram's <strong>*CONCERN*</strong> — two agents conversing in a loop. A loop requires two agents <em>auto-sending</em> at each other, so breaking the auto-send link breaks the loop. Three layers, cheapest first:</p>
+
+        <div class="cards">
+          <div class="card dng" style="border-top:2px solid rgba(242,97,107,.4)">
+            <h4 style="color:var(--danger)">Layer 1 — bot guard <span class="tag">required</span></h4>
+            <p>If an inbound post is bot-originated (<code>props.from_bot === "true"</code> or sender in a known-bot set), the verdict is <strong>forced to DRAFT</strong> — never auto-send to a bot. This alone breaks the loop, since a loop needs two agents auto-sending.</p>
+          </div>
+          <div class="card" style="border-top:2px solid var(--private-line)">
+            <h4 style="color:var(--private)">Layer 2 — thread depth counter <span class="tag">required</span></h4>
+            <p>Per root-thread counter of consecutive bot turns with no human post between them. Halt at <code>N = 3</code>: stop responding and post an ephemeral "paused — human turn needed." A human message resets the counter.</p>
+          </div>
+          <div class="card" style="border-top:2px solid var(--line-bright)">
+            <h4>Layer 3 — similarity break <span class="tag">stretch</span></h4>
+            <p>If the last <code>K</code> bot replies in a thread exceed cosine similarity <code>τ</code>, halt — catches degenerate "you're welcome / no, thank you" repeats that slip past depth limits.</p>
+          </div>
+        </div>
+
+        <p>Counters key on the root post id and live in the bridge — in-memory for the MVP, Redis after. Layer 1 is the load-bearing rule; Layers 2–3 are belt-and-suspenders.</p>
+      </section>
+
+      <!-- ===== 7 ===== -->
+      <section id="s7">
+        <div class="sec-head"><span class="sec-num">07</span><h2>The fork</h2></div>
+        <div class="call decision">
+          <div class="lab">▸ Decision — fork, not plugin</div>
+          <p>We fork to fine-tune functionality: full control of post rendering, the drafts inbox, and the context-settings surface, without fighting plugin boundaries. The trade is merge debt against upstream — accepted for a hackathon and contained by the discipline below.</p>
+        </div>
+
+        <h3>What changes</h3>
+        <table>
+          <thead><tr><th>Layer</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td>webapp · React/Redux</td><td>Custom post-type renderer for the draft card; a "Drafts" inbox view; a Public/Private context settings page.</td></tr>
+            <tr><td>server · Go</td><td><code>UserHasLoggedIn</code> hook → notify bridge; custom endpoints (<code>/aegis/approve</code>, <code>/aegis/edit</code>, <code>/aegis/discard</code>); bot account provisioning.</td></tr>
+            <tr><td>integration primitives</td><td>Unchanged — we still use the bot, WebSocket events, and attachment actions. The fork adds UI <em>on top of</em> these, it doesn't replace them.</td></tr>
+          </tbody>
+        </table>
+
+        <div class="call note">
+          <div class="lab">⚠ Fork discipline (keeps merge debt survivable)</div>
+          <p>Isolate all server changes behind an <code>aegis/</code> package and a feature flag. Keep a clean rebase branch against a pinned upstream tag. Touch as few core files as possible — orchestration lives in the bridge precisely so the fork stays thin.</p>
+        </div>
+      </section>
+
+      <!-- ===== 8 ===== -->
+      <section id="s8">
+        <div class="sec-head"><span class="sec-num">08</span><h2>Scope &amp; milestones</h2></div>
+        <div class="cards g2">
+          <div class="card">
+            <h4 style="color:var(--public)">In scope</h4>
+            <p>One demo user · one target channel · two hand-populated KBs · public-first/escalate-lock gate · Approve + Discard · bot-guard + depth counter · auto-send proven safe by construction.</p>
+          </div>
+          <div class="card">
+            <h4 style="color:var(--danger)">Cut</h4>
+            <p>Open Claw runtime · multi-tenant KB UI · semantic-similarity break · RBAC · audit-log persistence · mobile · true impersonation.</p>
+          </div>
+        </div>
+
+        <h3>Milestones</h3>
+        <table>
+          <thead><tr><th>Phase</th><th>Deliverable</th><th>Done when…</th></tr></thead>
+          <tbody>
+            <tr><td><span class="ph">P0</span> Setup</td><td>Fork builds; GraphN workspace + gateway reachable; bot account live</td><td><code>graphn whoami</code> + a bot post both succeed</td></tr>
+            <tr><td><span class="ph">P1</span> Echo</td><td>WebSocket → bridge → GraphN → reply in thread (gate ignored)</td><td>Agent replies to any message</td></tr>
+            <tr><td><span class="ph">P2</span> Gate</td><td>Two KBs; public-first/escalate-lock; verdict routing</td><td>Public Q auto-sends; private Q routes to draft</td></tr>
+            <tr><td><span class="ph">P3</span> Approval</td><td>Custom post-type card; Approve + Discard</td><td>A held draft can be approved into the channel</td></tr>
+            <tr><td><span class="ph">P4</span> Loops</td><td>Bot guard + depth counter</td><td>Two bots stop after N turns; never auto-loop</td></tr>
+            <tr><td><span class="ph">P5</span> Demo</td><td>Provenance line, settings stub, scripted demo path</td><td>End-to-end story runs clean on stage</td></tr>
+          </tbody>
+        </table>
+        <p style="color:var(--ink-3);font-size:15px">Dependency spine: P1 unblocks everything; P2 and P3 can run in parallel once P1 lands; P4 is independent and can be built any time after P1.</p>
+      </section>
+
+      <!-- ===== 9 ===== -->
+      <section id="s9">
+        <div class="sec-head"><span class="sec-num">09</span><h2>Risks &amp; open questions</h2></div>
+
+        <h3>Risks</h3>
+        <div class="call risk">
+          <div class="lab">● Prompt injection via the incoming message</div>
+          <p>A hostile message could instruct the agent to fetch and reveal private data. Mitigation is structural: <code>kb-private</code> is reachable only through the gated escalation that forces DRAFT, and the auto-send window never contains private content. Treat message text as <strong>data, not instructions</strong>, in the compose prompt.</p>
+        </div>
+        <div class="call risk">
+          <div class="lab">● Provenance completeness</div>
+          <p>If any private data source exists outside the instrumented path, provenance can't see it and the guarantee breaks. Enforce the single choke point (<a href="#s4">§04</a>) — no ungated private sources.</p>
+        </div>
+        <ul>
+          <li><strong>Mislabeled context.</strong> Default-private + fail-safe DRAFT means a mislabel holds rather than leaks.</li>
+          <li><strong>Latency.</strong> Gateway round-trip + retrieval may dull the "real-time" feel. Acceptable for MVP; show a typing indicator.</li>
+          <li><strong>Bot-detection reliability.</strong> Combine the <code>from_bot</code> prop with a known-bot allowlist; default unknown automation to DRAFT.</li>
+          <li><strong>Fork merge debt.</strong> Contained by isolation + feature flag + thin changes (<a href="#s7">§07</a>).</li>
+        </ul>
+
+        <h3>Open questions</h3>
+        <div class="call decision">
+          <div class="lab">▸ Identity — who does the agent post as?</div>
+          <p>The model is "agent acts as the user," but true impersonation is harder and riskier. <strong>MVP recommendation:</strong> post as a dedicated bot clearly labeled "on behalf of {user}." Posting <em>as</em> the user is post-MVP. Confirm this is acceptable for the demo.</p>
+        </div>
+        <ul>
+          <li><strong>Reply destination</strong> — MVP replies in the same thread the message arrived in. New-DM routing is later.</li>
+          <li><strong>Counter persistence</strong> — in-memory for the hackathon; Redis when multi-process.</li>
+          <li><strong>Confidence threshold</strong> — what retrieval score trips "abstain → DRAFT"? Tune on the demo corpus during P2.</li>
+        </ul>
+      </section>
+
+      <!-- ===== 10 ===== -->
+      <section id="s10">
+        <div class="sec-head"><span class="sec-num">10</span><h2>Appendix — sketches</h2></div>
+        <p style="color:var(--ink-3);font-size:15px">Illustrative, not final. Shapes the conversation; not wiring instructions.</p>
+
+        <h4>A · Gate verdict (bridge, public-first / escalate-and-lock)</h4>
+        <div class="code">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span> bridge/gate.py</div>
+<pre><span class="c"># The auto-send path never loads kb-private. Retrieval — not usage — sets the verdict.</span>
+<span class="k">def</span> <span class="f">decide</span>(msg, session):
+    <span class="c"># Layer 1: a loop needs two agents auto-sending. Bot origin can never auto-send.</span>
+    <span class="k">if</span> msg.is_from_bot <span class="k">or</span> msg.sender_id <span class="k">in</span> KNOWN_BOTS:
+        <span class="k">return</span> Verdict(<span class="privv">DRAFT</span>, reason=<span class="s">"bot origin"</span>)
+
+    <span class="c"># Pass 1 — compose using ONLY public context. kb-private is not in this window.</span>
+    pub = graphn.run(WORKFLOW_PUBLIC, input=msg.text, kb=[<span class="s">"kb-public"</span>])
+
+    <span class="k">if</span> pub.grounded <span class="k">and</span> pub.confidence &gt;= CONF_MIN:
+        <span class="k">return</span> Verdict(<span class="pubv">AUTO_SEND</span>, reply=pub.text, provenance=pub.sources)
+
+    <span class="c"># Pass 2 — escalate to private. The verdict is now LOCKED to DRAFT no matter what.</span>
+    priv = graphn.run(WORKFLOW_PRIVATE, input=msg.text, kb=[<span class="s">"kb-public"</span>, <span class="s">"kb-private"</span>])
+    <span class="k">return</span> Verdict(<span class="privv">DRAFT</span>, reply=priv.text,
+                   reason=<span class="s">f"referenced {priv.private_hits} private sources"</span>)
+</pre>
+        </div>
+
+        <h4>B · Draft card — interactive message attachment</h4>
+        <div class="code">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span> bridge → POST /api/v4/posts</div>
+<pre>{
+  <span class="f">"channel_id"</span>: <span class="s">"&lt;user_dm_channel&gt;"</span>,
+  <span class="f">"props"</span>: {
+    <span class="f">"type"</span>: <span class="s">"custom_aegis_draft"</span>,        <span class="c">// forked webapp renders this</span>
+    <span class="f">"attachments"</span>: [{
+      <span class="f">"title"</span>: <span class="s">"Held · referenced 2 private sources"</span>,
+      <span class="f">"text"</span>: <span class="s">"&lt;proposed reply&gt;"</span>,
+      <span class="f">"actions"</span>: [
+        {<span class="f">"name"</span>: <span class="s">"Approve"</span>, <span class="f">"integration"</span>: {
+          <span class="f">"url"</span>: <span class="s">"https://bridge/aegis/approve"</span>,
+          <span class="f">"context"</span>: {<span class="f">"draft_id"</span>: <span class="s">"d_91"</span>, <span class="f">"target"</span>: <span class="s">"&lt;channel&gt;"</span>, <span class="f">"root"</span>: <span class="s">"&lt;thread&gt;"</span>}}},
+        {<span class="f">"name"</span>: <span class="s">"Discard"</span>, <span class="f">"integration"</span>: {
+          <span class="f">"url"</span>: <span class="s">"https://bridge/aegis/discard"</span>,
+          <span class="f">"context"</span>: {<span class="f">"draft_id"</span>: <span class="s">"d_91"</span>}}}
+      ]
+    }]
+  }
+}
+</pre>
+        </div>
+
+        <h4>C · GraphN workflow lifecycle (CLI)</h4>
+        <div class="code">
+          <div class="bar"><span class="lights"><i></i><i></i><i></i></span> shell</div>
+<pre><span class="c"># Two knowledge bases — physical separation = trivial provenance</span>
+graphn kb create kb-public
+graphn kb create kb-private
+
+<span class="c"># Test the public-only path BEFORE wiring it to live messages</span>
+graphn workflow dry-run &lt;wf-public&gt; --input '{<span class="f">"query"</span>:<span class="s">"office hours?"</span>}'
+
+<span class="c"># Publish versioned workflows the bridge calls via the gateway</span>
+graphn workflow publish &lt;wf-public&gt;  -m <span class="s">"public-only compose"</span>
+graphn workflow publish &lt;wf-private&gt; -m <span class="s">"escalated compose (locks DRAFT)"</span>
+</pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <div class="row">
+      <span>AEGIS · TDD v0.1 · Draft for review</span>
+      <span>Forked Mattermost × GraphN</span>
+      <span>Fail-safe: always DRAFT</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // scroll progress bar
+  const prog = document.getElementById('progress');
+  const onScroll = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    prog.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+  };
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  // staggered reveal for sections
+  document.querySelectorAll('main section').forEach((s, i) => {
+    s.classList.add('rv');
+    s.style.animationDelay = (0.04 * i) + 's';
+  });
+
+  // TOC scrollspy
+  const links = [...document.querySelectorAll('nav.toc a')];
+  const map = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('on'));
+        const a = map.get(e.target.id);
+        if (a) a.classList.add('on');
+      }
+    });
+  }, {rootMargin: '-20% 0px -70% 0px', threshold: 0});
+  document.querySelectorAll('main section').forEach(s => io.observe(s));
+</script>
+</body>
+</html>

@@ -64,6 +64,21 @@ def post_card(user_id: str, draft: Draft) -> dict:
     return resp.json()
 
 
+def post_ephemeral_draft(user_id: str, channel_id: str, draft_id: str) -> dict:
+    """Post a custom_aegis_draft ephemeral into the channel, visible only to user_id."""
+    resp = _client.post("/api/v4/posts/ephemeral", json={
+        "user_id": user_id,
+        "post": {
+            "channel_id": channel_id,
+            "message": "",
+            "type": "custom_aegis_draft",
+            "props": {"draft_id": draft_id},
+        },
+    })
+    resp.raise_for_status()
+    return resp.json()
+
+
 def post_thread_notice(channel_id: str, root_id: str, text: str) -> dict:
     resp = _client.post("/api/v4/posts", json={
         "channel_id": channel_id,

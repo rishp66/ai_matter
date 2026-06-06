@@ -25,9 +25,11 @@ async def handle_message(msg: Message) -> None:
             reason=verdict.reason,
             provenance=verdict.provenance,
             trigger_text=msg.text,
+            owner_user_id=msg.user_id,
+            contexts=[],
         )
         drafts.put(draft)
-        await asyncio.to_thread(mm_client.post_card, msg.user_id, draft)
+        await asyncio.to_thread(mm_client.post_ephemeral_draft, msg.user_id, msg.channel_id, draft.id)
 
 
 async def main() -> None:

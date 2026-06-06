@@ -12,7 +12,7 @@ os.environ.setdefault("GRAPHN_WORKSPACE_ID", "ws_test")
 os.environ.setdefault("GRAPHN_WF_PUBLIC", "wf-pub")
 os.environ.setdefault("GRAPHN_WF_PRIVATE", "wf-priv")
 
-from bridge.mm_client import post_reply, post_dm
+from bridge.mm_client import post_reply, post_dm, post_ephemeral_draft
 
 
 def _mock_response(status=201, data=None):
@@ -150,6 +150,28 @@ def test_post_card_context_has_draft_id(monkeypatch):
     actions = body["props"]["attachments"][0]["actions"]
     for a in actions:
         assert a["integration"]["context"]["draft_id"] == "my-draft-id"
+
+
+def test_post_ephemeral_draft(monkeypatch):
+    """post_ephemeral_draft POSTs to /api/v4/posts/ephemeral with correct body."""
+    from bridge import mm_client
+
+    mock_client = MagicMock()
+    mock_client.post.return_value = MagicMock(
+        status_code=201, json=lambda: {"id": "eph-post-1"}
+    )
+    monkeypatch.setattr(mm_client, "_client", mock_client)
+
+    post_ephemeral_draft(user_id="u1", channel_id="ch-1", draft_id="draft-42")
+
+    url = mock_client.post.call_args[0][0]
+    assert url == "/api/v4/posts/ephemeral"
+
+    body = mock_client.post.call_args[1]["json"]
+    assert body["user_id"] == "u1"
+    assert body["post"]["channel_id"] == "ch-1"
+    assert body["post"]["type"] == "custom_aegis_draft"
+    assert body["post"]["props"]["draft_id"] == "draft-42"
 
 
 def test_post_thread_notice_sends_to_posts(monkeypatch):

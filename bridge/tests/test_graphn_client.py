@@ -8,6 +8,7 @@ os.environ.setdefault("MM_BOT_USER_ID", "bot-user-id")
 os.environ.setdefault("MM_DEMO_CHANNEL_ID", "demo-ch")
 os.environ.setdefault("GRAPHN_GATEWAY_URL", "http://graphn.test")
 os.environ.setdefault("GRAPHN_API_KEY", "test-key")
+os.environ.setdefault("GRAPHN_WORKSPACE_ID", "ws_test")
 os.environ.setdefault("GRAPHN_WF_PUBLIC", "wf-pub")
 os.environ.setdefault("GRAPHN_WF_PRIVATE", "wf-priv")
 
@@ -15,11 +16,15 @@ from bridge.graphn_client import run_workflow
 from bridge.models import GraphNResult
 
 _MOCK_RESPONSE = {
-    "text": "Office hours are Mon/Wed 2-4pm.",
-    "grounded": True,
-    "confidence": 0.92,
-    "sources": ["chunk_001"],
-    "private_hits": 0,
+    "output": {
+        "result": {
+            "text": "Office hours are Mon/Wed 2-4pm.",
+            "grounded": True,
+            "confidence": 0.92,
+            "sources": ["chunk_001"],
+            "private_hits": 0,
+        }
+    }
 }
 
 
@@ -40,12 +45,14 @@ def test_returns_graphn_result():
     assert result.private_hits == 0
 
 
-def test_workflow_id_appears_in_url():
+def test_workflow_id_and_workspace_in_url():
     with patch("bridge.graphn_client._client") as mock_client:
         mock_client.post.return_value = _mock_ok()
         run_workflow(workflow_id="wf-abc", query="test")
         url = mock_client.post.call_args[0][0]
         assert "wf-abc" in url
+        assert "ws_test" in url
+        assert url.endswith("/sync")
 
 
 def test_query_sent_in_body():
@@ -53,7 +60,7 @@ def test_query_sent_in_body():
         mock_client.post.return_value = _mock_ok()
         run_workflow(workflow_id="wf-pub", query="What is my salary?")
         payload = mock_client.post.call_args[1]["json"]
-        assert payload["query"] == "What is my salary?"
+        assert payload["input"]["query"] == "What is my salary?"
 
 
 def test_raises_on_gateway_error():

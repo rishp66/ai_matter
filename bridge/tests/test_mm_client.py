@@ -8,6 +8,7 @@ os.environ.setdefault("MM_BOT_USER_ID", "bot-user-id")
 os.environ.setdefault("MM_DEMO_CHANNEL_ID", "demo-ch")
 os.environ.setdefault("GRAPHN_GATEWAY_URL", "http://graphn.test")
 os.environ.setdefault("GRAPHN_API_KEY", "test-key")
+os.environ.setdefault("GRAPHN_WORKSPACE_ID", "ws_test")
 os.environ.setdefault("GRAPHN_WF_PUBLIC", "wf-pub")
 os.environ.setdefault("GRAPHN_WF_PRIVATE", "wf-priv")
 

@@ -9,6 +9,7 @@ with patch.dict("os.environ", {
     "MM_DEMO_CHANNEL_ID": "demo-ch",
     "GRAPHN_GATEWAY_URL": "http://graphn.test",
     "GRAPHN_API_KEY": "test-key",
+    "GRAPHN_WORKSPACE_ID": "ws_test",
     "GRAPHN_WF_PUBLIC": "wf-pub",
     "GRAPHN_WF_PRIVATE": "wf-priv",
 }):

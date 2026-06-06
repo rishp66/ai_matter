@@ -1,0 +1,82 @@
+name: Publish nginx test image to GHCR
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-nginx-test:
+    name: Publish nginx test image to GHCR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Compute image name
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          OWNER_LOWER="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          REPO_LOWER="$(echo "${REPO_NAME}" | tr '[:upper:]' '[:lower:]')"
+
+          IMAGE_BASE="ghcr.io/${OWNER_LOWER}/${REPO_LOWER}"
+
+          echo "image_base=${IMAGE_BASE}" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+          echo "Repository: ${GITHUB_REPOSITORY}"
+          echo "Branch:     ${GITHUB_REF_NAME}"
+          echo "Image base: ${IMAGE_BASE}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and tag nginx
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE_BASE="${{ steps.meta.outputs.image_base }}"
+          SHA_TAG="${{ steps.meta.outputs.sha_tag }}"
+
+          docker pull nginx:latest
+
+          docker tag nginx:latest "${IMAGE_BASE}:nginx-test"
+          docker tag nginx:latest "${IMAGE_BASE}:latest"
+          docker tag nginx:latest "${IMAGE_BASE}:${SHA_TAG}"
+
+      - name: Push to GHCR
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE_BASE="${{ steps.meta.outputs.image_base }}"
+          SHA_TAG="${{ steps.meta.outputs.sha_tag }}"
+
+          docker push "${IMAGE_BASE}:nginx-test"
+          docker push "${IMAGE_BASE}:latest"
+          docker push "${IMAGE_BASE}:${SHA_TAG}"
+
+      - name: Print result
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE_BASE="${{ steps.meta.outputs.image_base }}"
+
+          echo "GHCR nginx test image pushed:"
+          echo "${IMAGE_BASE}:nginx-test"
+          echo ""
+          echo "Local test command:"
+          echo "docker pull ${IMAGE_BASE}:nginx-test"

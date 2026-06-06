@@ -1,0 +1,54 @@
+document:
+  dsl: "1.0.0"
+  name: wf-public
+  version: "0.2.0"
+
+agents:
+  Aegis_Synthesizer: ""
+
+functions:
+  pub_search: ""
+  format_result: ""
+
+chat_hints: |
+  I answer workplace questions using public company information.
+  Ask about office hours, team events, onboarding, or the project roadmap.
+
+input:
+  query:
+    type: string
+    required: true
+    description: Search query
+
+steps:
+  search:
+    call: function
+    function: pub_search
+    input:
+      query: ${input.query}
+    output: search_result
+
+  synthesize:
+    call: agent
+    agent: Aegis_Synthesizer
+    after: [search]
+    input_template: |
+      Question: ${input.query}
+
+      Retrieved context:
+      ${steps.search.output.context}
+
+      Write a concise, natural answer using only the retrieved context.
+    output: answer
+
+  format:
+    call: function
+    function: format_result
+    after: [synthesize]
+    input:
+      answer: ${steps.synthesize.output}
+      search: ${steps.search.output}
+    output: result
+
+output:
+  result: ${steps.format.output}

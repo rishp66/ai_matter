@@ -1,0 +1,10 @@
+{
+    "id": "com.aegis.drafting",
+    "name": "AEGIS Drafting",
+    "description": "AI drafting surface and knowledge management",
+    "version": "0.1.0",
+    "min_server_version": "9.0.0",
+    "webapp": {
+        "bundle_path": "webapp/main.js"
+    }
+}

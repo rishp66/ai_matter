@@ -3,10 +3,14 @@
 1. public-corpus.txt - 
 
 ```
-Team standup meetings are held daily at 9am in the Network Operations Center.
-The quarterly business review is scheduled for March 15th at 2pm in Conference Room B.
-All employees are required to complete security awareness training by end of month.
-Verizon benefits include discounted cell phone plans and 401k matching up to 6%.
+Platform Engineer at Verizon Mobile Anti-Spam Platforms team based in Bedminster, New Jersey.
+Previously served as Network Engineer on Multi-Access Edge Compute & Edge Core Implementation team driving nationwide deployments.
+Expertise in Kubernetes, virtualized infrastructure automation using Python, Ansible, and Terraform for spam mitigation systems.
+Rutgers University graduate with B.S. in Computer Science; progressed from Level 1 IT Consultant to Level 3 Supervisor at Rutgers OIT.
+Founded AG Innovations consulting practice specializing in LLM deployment, RAG systems, and cloud infrastructure solutions.
+Proficient in OpenShift, OpenStack, cloud applications, SQL, Python, React.js, and Tailwind CSS.
+Experience designing automated validation testing frameworks, custom data processing tools, and BigQuery reporting for mission-critical operations.
+Top skills: network engineering, automation, platform reliability, predictive capacity management, and AI integration for infrastructure.
 ```
 
 1. private-corpus.txt - 
@@ -25,10 +29,14 @@ Planning to transfer to the 5G infrastructure team or seek external opportunitie
 2. public-corpus.txt - 
 
 ```
-SOC triage shifts rotate on a two-week basis across morning, afternoon, and night coverage.
-Monthly threat intelligence briefings occur on the second Wednesday at 11am with the detection team.
-Professional development budget of $3,000 per year is available for certifications and conferences.
-Darktrace gym membership at NYCAC is subsidized at 60% for all Manhattan staff.
+Darktrace Cyber Analyst role based in Manhattan, New York managing threat detection and incident response.
+CompTIA Security+, Azure Fundamentals (AZ-900), and Qualys certifications required for role progression.
+Previously completed 10-month tenure at Brother USA as Cyber Security Analyst managing Taegis EDR and Crowdstrike AV.
+Rutgers University graduate with B.A. in Information Technology & Informatics, Minor in Data Science (3.7 GPA, Magna Cum Laude).
+Founded Rutgers Organization of Cloud Computing with 200+ members and 20+ coordinated events on Azure, Linux, and Networking.
+GitHub portfolio: github.com/rishp66 showcasing cloud architecture and automation projects including Streamlit and LLM applications.
+Proficient in Darktrace detection, CrowdStrike EDR, Microsoft Sentinel, Azure infrastructure, and Python scripting.
+Skilled in NIST-compliant security monitoring, incident response, SIEM integration, and KPI/KRI reporting automation via PowerBI.
 ```
 
 2. private-corpus.txt - 
@@ -36,6 +44,8 @@ Darktrace gym membership at NYCAC is subsidized at 60% for all Manhattan staff.
 ```
 My base salary is $110,000 plus 10% bonus tied to SOC SLA metrics and automation improvements.
 Secret project: developing an AI-powered SOC automation framework launching Q3 2026 internally.
+I'm completing Georgia Tech's OMS Cybersecurity (Info Security track) starting Fall 2026 at 11.5K total.
+Actively job searching in October for Cloud Security Engineer or Detection Engineer roles in NYC metro.
 ```
 
 ---
@@ -45,10 +55,14 @@ Secret project: developing an AI-powered SOC automation framework launching Q3 2
 3. public-corpus.txt - 
 
 ```
-Engineering sync occurs every Tuesday at 10am to review product roadmap and open bugs.
-Annual salary reviews and promotion discussions are scheduled for May and November.
-Cyera offers unlimited PTO with a recommended minimum of 15 days annually.
-All engineers must complete the Cyera data governance certification within their first 90 days.
+Associate Technical Solutions Architect at Cyera based in Marlboro, New Jersey focusing on data security solutions.
+Recently transitioned from Solutions Architect Intern role (July-September 2025) to full Associate Technical role (January 2026).
+Rutgers University graduate with B.S. in Computer Science (September 2021 - January 2026).
+Proficient in React.js, Express.js, web development, data structures, algorithms, and solutions architecture.
+Previously managed inventory and operations as Logistics Associate at Creative Canines for 2+ years.
+Participated in Braven Fellowship program developing leadership, teamwork, and 21st-century workforce skills.
+Focus areas: real-world application development, inventory management systems, and customer-facing technical solutions.
+Strong problem-solving capabilities with detail-oriented approach to engineering challenges.
 ```
 
 3. private-corpus.txt - 
@@ -67,10 +81,14 @@ Evaluating competing offers from two other cloud security startups; negotiating 
 4. public-corpus.txt - 
 
 ```
-Morning market open meeting is mandatory at 8am for all trading desk analysts.
-Annual compliance training and attestations must be completed by January 31st each year.
-Goldman Sachs offers comprehensive healthcare, dental, and vision coverage with 100% employer contribution.
-All managing directors are required to pass the CFA Level III exam within three years of promotion.
+Engineering Analyst at Goldman Sachs based in New York City Metropolitan Area (Jersey City office).
+Full Stack Software Engineer building and maintaining large-scale financial systems across banking, investment, and money movement domains.
+Currently in role since July 2024 (2 years tenure) working on Java Spring Boot, React, and distributed systems.
+Previously completed Summer Analyst Engineer Intern (June-August 2023) on fraud detection platform supporting savings accounts.
+Rutgers University graduate with B.S. in Computer Science; attended Atlantic Cape Community College (2019-2021).
+Expertise: Java Spring Boot, React.js, AWS, Enterprise JavaBeans (EJB), MongoDB, Kafka, production reliability, and SDLC modernization.
+Responsibilities: backend services development, legacy monolith stabilization, production issue resolution, and cloud migration initiatives.
+Proficient in unit testing, cross-service integration, API development, and financial systems architecture.
 ```
 
 4. private-corpus.txt - 

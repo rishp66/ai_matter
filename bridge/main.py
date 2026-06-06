@@ -1,26 +1,57 @@
 import asyncio
-from bridge import ws_client, mm_client, gate
+import uvicorn
+from bridge import config, ws_client, mm_client, gate, drafts, loopguard
+from bridge.drafts import Draft
 from bridge.models import Message, VerdictKind
+from bridge.server import app
 
 
 async def handle_message(msg: Message) -> None:
-    verdict = gate.decide(msg)
-
+    root = msg.root_id or msg.id
+    # Layer 2: loop guard (Layer 1 is inside gate.decide)
+    if loopguard.record_turn(root, msg.is_from_bot):
+        mm_client.post_thread_notice(msg.channel_id, root, "⏸ Paused — human turn needed.")
+        return
+    # gate.decide is sync+blocking (GraphN round-trip); run it in a thread
+    verdict = await asyncio.to_thread(gate.decide, msg)
     if verdict.kind == VerdictKind.AUTO_SEND:
-        root = msg.root_id or msg.id
-        mm_client.post_reply(
-            channel_id=msg.channel_id,
-            root_id=root,
-            text=verdict.reply,
-        )
+        mm_client.post_reply(msg.channel_id, root, verdict.reply)
     else:
-        held_text = f"(held) {verdict.reason}\n\n---\n{verdict.reply}"
-        mm_client.post_dm(user_id=msg.user_id, text=held_text)
+        draft = Draft(
+            id=drafts.new_id(),
+            reply=verdict.reply,
+            target_channel_id=msg.channel_id,
+            root_id=root,
+            reason=verdict.reason,
+            provenance=verdict.provenance,
+            trigger_text=msg.text,
+        )
+        drafts.put(draft)
+        mm_client.post_card(msg.user_id, draft)
 
 
 async def main() -> None:
-    print("AEGIS bridge starting — gate mode")
-    await ws_client.listen(handle_message)
+    print("AEGIS bridge starting — gate + approval card + loop guard")
+    server = uvicorn.Server(uvicorn.Config(
+        app,
+        host=config.BRIDGE_HOST,
+        port=config.BRIDGE_PORT,
+        log_level="info",
+        lifespan="off",
+    ))
+    ws_task = asyncio.create_task(ws_client.listen(handle_message), name="ws")
+    http_task = asyncio.create_task(server.serve(), name="http")
+    done, pending = await asyncio.wait(
+        {ws_task, http_task},
+        return_when=asyncio.FIRST_COMPLETED,
+    )
+    server.should_exit = True
+    for t in pending:
+        t.cancel()
+    await asyncio.gather(*pending, return_exceptions=True)
+    for t in done:
+        if not t.cancelled() and t.exception():
+            raise t.exception()
 
 
 if __name__ == "__main__":

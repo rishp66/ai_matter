@@ -36,8 +36,6 @@ Darktrace gym membership at NYCAC is subsidized at 60% for all Manhattan staff.
 ```
 My base salary is $110,000 plus 10% bonus tied to SOC SLA metrics and automation improvements.
 Secret project: developing an AI-powered SOC automation framework launching Q3 2026 internally.
-I'm completing Georgia Tech's OMS Cybersecurity (Info Security track) starting Fall 2026 at 11.5K total.
-Actively job searching in October for Cloud Security Engineer or Detection Engineer roles in NYC metro.
 ```
 
 ---

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "graphn": {
+      "args": [
+        "mcp-serve"
+      ],
+      "command": "/opt/homebrew/bin/graphn"
+    }
+  }
+}

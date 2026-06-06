@@ -13,3 +13,6 @@ GRAPHN_WORKSPACE_ID: str = os.environ["GRAPHN_WORKSPACE_ID"]
 GRAPHN_WF_PUBLIC: str = os.environ["GRAPHN_WF_PUBLIC"]
 GRAPHN_WF_PRIVATE: str = os.environ["GRAPHN_WF_PRIVATE"]
 CONF_MIN: float = float(os.getenv("CONF_MIN", "0.65"))
+BRIDGE_HOST: str = os.getenv("BRIDGE_HOST", "0.0.0.0")
+BRIDGE_PORT: int = int(os.getenv("BRIDGE_PORT", "8080"))
+BRIDGE_BASE_URL: str = os.getenv("BRIDGE_BASE_URL", "http://localhost:8080")
